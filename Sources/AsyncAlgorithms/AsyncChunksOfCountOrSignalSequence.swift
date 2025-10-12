@@ -86,7 +86,7 @@ extension AsyncSequence {
 @available(AsyncAlgorithms 1.0, *)
 public struct AsyncChunksOfCountOrSignalSequence<
   Base: AsyncSequence,
-  Collected: RangeReplaceableCollection,
+  Collected: RangeReplaceableCollection & _SendableMetatype,
   Signal: AsyncSequence
 >: AsyncSequence, Sendable
 where

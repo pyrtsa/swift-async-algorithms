@@ -77,7 +77,7 @@ public struct Validator<Element: Sendable>: Sendable {
   public func test<S: AsyncSequence>(
     _ sequence: S,
     onFinish: @Sendable @escaping (inout S.AsyncIterator) async -> Void
-  ) where S.Element == Element {
+  ) where S.Element == Element, S: _SendableMetatype, S.AsyncIterator: _SendableMetatype {
     let envelope = Envelope(contents: sequence)
     Task {
       var iterator = envelope.contents.makeAsyncIterator()

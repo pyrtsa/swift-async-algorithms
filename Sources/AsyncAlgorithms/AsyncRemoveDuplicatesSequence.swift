@@ -10,7 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 @available(AsyncAlgorithms 1.0, *)
-extension AsyncSequence where Element: Equatable {
+extension AsyncSequence where Element: Equatable & _SendableMetatype {
   /// Creates an asynchronous sequence that omits repeated elements.
   @available(AsyncAlgorithms 1.0, *)
   public func removeDuplicates() -> AsyncRemoveDuplicatesSequence<Self> {
