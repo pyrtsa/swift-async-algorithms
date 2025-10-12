@@ -15,7 +15,6 @@ import XCTest
 import AsyncAlgorithms
 import Synchronization
 
-@available(macOS 15.0, *)
 final class TestShare: XCTestCase {
 
   // MARK: - Basic Functionality Tests
@@ -468,6 +467,38 @@ final class TestShare: XCTestCase {
     XCTAssertTrue(consumer2Error.withLock { $0 is TestError })
   }
 
+  func test_share_forwards_typed_error_and_actor_isolation() async throws {
+    guard #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) else {
+      throw XCTSkip()
+    }
+    let source = [1, 2, 3, 4, 5].async.setFailureType(TestError.self).map1 { (value) throws(TestError) in
+      if value == 3 {
+        throw TestError.failure
+      }
+      return value
+    }
+    let shared = source.share()
+    let consumer1Results = ManagedCriticalState([Int]())
+    let consumer1Error = ManagedCriticalState<TestError?>(nil)
+
+    func operation() async {
+      do {
+        for try await value in shared {
+          consumer1Results.withLock { $0.append(value) }
+        }
+      } catch {
+        consumer1Error.withLock { $0 = error }
+      }
+    }
+    let consumer1 = Task {
+      await operation()
+    }
+
+    _ = await consumer1.value
+    XCTAssertEqual(consumer1Results.withLock { $0 }, [1, 2])
+    XCTAssertTrue(consumer1Error.withLock { $0 != nil })
+  }
+
   // MARK: - Timing and Race Condition Tests
 
   func test_share_with_late_joining_consumer() async {
@@ -579,5 +610,76 @@ final class TestShare: XCTestCase {
 private enum TestError: Error, Equatable {
   case failure
 }
+
+private extension AsyncSequence {
+  @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+  func map1<Transformed: Sendable>(
+    _ transform: @escaping @Sendable (Element) async throws(Failure) -> Transformed
+  ) -> some AsyncSequence<Transformed, Failure> & SendableMetatype where Element: Sendable {
+    _AsyncMapSequence(base: self, transform: transform)
+  }
+
+  @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+  func mapFailure<Failure: Error>(
+    _ transform: @escaping @Sendable (Self.Failure) async -> Failure
+  ) -> some AsyncSequence<Element, Failure> & SendableMetatype {
+    _AsyncMapFailureSequence(base: self, transform: transform)
+  }
+
+  @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+  func setFailureType<Failure: Error>(
+    _ type: Failure.Type
+  ) -> some AsyncSequence<Element, Failure> & SendableMetatype where Self.Failure == Never {
+    mapFailure { $0 as Never }
+  }
+}
+
+@available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+private struct _AsyncMapSequence<Base, Element: Sendable>: AsyncSequence
+where Base: AsyncSequence, Base.Element: Sendable {
+  let base: Base
+  let transform: @Sendable (Base.Element) async throws(Failure) -> Element
+  typealias Failure = Base.Failure
+  func makeAsyncIterator() -> AsyncIterator {
+    AsyncIterator(iterator: base.makeAsyncIterator(), transform: transform)
+  }
+  struct AsyncIterator: AsyncIteratorProtocol {
+    var iterator: Base.AsyncIterator
+    let transform: @Sendable (Base.Element) async throws(Failure) -> Element
+    mutating func next(isolation actor: isolated (any Actor)?) async throws(Failure) -> Element? {
+      guard let value = try await iterator.next(isolation: actor) else { return nil }
+      return try await transform(value)
+    }
+  }
+}
+
+@available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+extension _AsyncMapSequence: Sendable where Base: Sendable, Element: Sendable, Base.Element: Sendable {}
+
+@available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+private struct _AsyncMapFailureSequence<Base, Failure: Error>: AsyncSequence
+where Base: AsyncSequence {
+  let base: Base
+  let transform: @Sendable (Base.Failure) async -> Failure
+  typealias Element = Base.Element
+  func makeAsyncIterator() -> AsyncIterator {
+    AsyncIterator(iterator: base.makeAsyncIterator(), transform: transform)
+  }
+  struct AsyncIterator: AsyncIteratorProtocol {
+    var iterator: Base.AsyncIterator
+    let transform: @Sendable (Base.Failure) async -> Failure
+    mutating func next(isolation actor: isolated (any Actor)?) async throws(Failure) -> Base.Element? {
+      do {
+        return try await iterator.next(isolation: actor)
+      } catch {
+        throw await transform(error)
+      }
+    }
+  }
+}
+
+@available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+extension _AsyncMapFailureSequence: Sendable where Base: Sendable, Failure: Sendable, Base.Element: Sendable {}
+
 
 #endif
