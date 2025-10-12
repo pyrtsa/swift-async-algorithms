@@ -189,7 +189,7 @@ public func XCTAssertEqual<A: Equatable, B: Equatable, C: Equatable>(
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal func XCTAssertThrowsError<T>(
   _ expression: @autoclosure () async throws -> T,
-  file: StaticString = #file,
+  file: StaticString = #filePath,
   line: UInt = #line,
   verify: (Error) -> Void = { _ in }
 ) async {
@@ -243,7 +243,7 @@ extension XCTestCase {
     of expectations: [XCTestExpectation],
     timeout: TimeInterval,
     enforceOrder: Bool = false,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: Int = #line
   ) async {
     return await withUnsafeContinuation { continuation in

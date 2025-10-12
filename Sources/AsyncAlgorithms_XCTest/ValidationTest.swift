@@ -38,7 +38,7 @@ extension XCTestCase {
     theme: Theme,
     expectedFailures: Set<String>,
     @AsyncSequenceValidationDiagram _ build: (AsyncSequenceValidationDiagram) -> Test,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line
   ) {
     var expectations = expectedFailures
@@ -82,7 +82,7 @@ extension XCTestCase {
   func validate<Test: AsyncSequenceValidationTest>(
     expectedFailures: Set<String>,
     @AsyncSequenceValidationDiagram _ build: (AsyncSequenceValidationDiagram) -> Test,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line
   ) {
     validate(theme: .ascii, expectedFailures: expectedFailures, build, file: file, line: line)
@@ -92,7 +92,7 @@ extension XCTestCase {
   public func validate<Test: AsyncSequenceValidationTest, Theme: AsyncSequenceValidationTheme>(
     theme: Theme,
     @AsyncSequenceValidationDiagram _ build: (AsyncSequenceValidationDiagram) -> Test,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line
   ) {
     validate(theme: theme, expectedFailures: [], build, file: file, line: line)
@@ -101,7 +101,7 @@ extension XCTestCase {
   @available(AsyncAlgorithms 1.0, *)
   public func validate<Test: AsyncSequenceValidationTest>(
     @AsyncSequenceValidationDiagram _ build: (AsyncSequenceValidationDiagram) -> Test,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line
   ) {
     validate(theme: .ascii, expectedFailures: [], build, file: file, line: line)
