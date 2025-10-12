@@ -696,21 +696,32 @@ where Base.Element: Sendable, Base: _SendableMetatype, Base.AsyncIterator: _Send
 @available(AsyncAlgorithms 1.0, *)
 extension AsyncShareSequence: AsyncSequence {
   public typealias Element = Base.Element
-  public typealias Failure = Swift.Error
+  @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+  public typealias Failure = Base.Failure
 
   public struct Iterator: AsyncIteratorProtocol {
     let side: Side
+    @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+    public typealias Failure = Base.Failure
 
     init(_ iteration: Iteration) {
       side = Side(iteration)
     }
 
-    mutating public func next() async rethrows -> Element? {
+    @_disfavoredOverload
+    public mutating func next() async rethrows -> Element? {
       try await side.next(isolation: nil)
     }
 
-    mutating public func next(isolation actor: isolated (any Actor)?) async throws(Failure) -> Element? {
-      try await side.next(isolation: actor)
+    @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+    public mutating func next(
+      isolation actor: isolated (any Actor)? = #isolation
+    ) async throws(Failure) -> Element? {
+      do {
+        return try await side.next(isolation: actor)
+      } catch {
+        throw error as! Failure
+      }
     }
   }
 
