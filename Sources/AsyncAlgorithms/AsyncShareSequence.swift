@@ -12,7 +12,7 @@
 import Synchronization
 import DequeModule
 
-@available(AsyncAlgorithms 1.0, *)
+@available(AsyncAlgorithms 1.1, *)
 extension AsyncSequence
 where Element: Sendable, Self: _SendableMetatype {
   /// Creates a shared async sequence that allows multiple concurrent iterations over a single source.
@@ -112,7 +112,7 @@ where Element: Sendable, Self: _SendableMetatype {
 //
 // This type is typically not used directly; instead, use the `share()` method on any
 // async sequence that meets the sendability requirements.
-@available(AsyncAlgorithms 1.0, *)
+@available(AsyncAlgorithms 1.1, *)
 public struct AsyncShareSequence<Base: AsyncSequence>: Sendable
 where Base.Element: Sendable, Base: _SendableMetatype {
   // Represents a single consumer's connection to the shared sequence.
@@ -693,7 +693,7 @@ where Base.Element: Sendable, Base: _SendableMetatype {
   }
 }
 
-@available(AsyncAlgorithms 1.0, *)
+@available(AsyncAlgorithms 1.1, *)
 extension AsyncShareSequence: AsyncSequence {
   public typealias Element = Base.Element
   @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
