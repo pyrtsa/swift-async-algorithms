@@ -133,7 +133,7 @@ where Base.Element: Sendable, Base: _SendableMetatype, Base.AsyncIterator: _Send
     // - `continuation`: The continuation waiting for the next element (nil if not waiting)
     // - `position`: The consumer's current position in the shared buffer
     struct State {
-      var continuation: UnsafeContinuation<Result<Base.Element?, Error>, Never>?
+      var continuation: UnsafeContinuation<Result<Base.Element?, any Error>, Never>?
       var position = 0
 
       // Creates a new state with the position adjusted by the given offset.
@@ -230,7 +230,7 @@ where Base.Element: Sendable, Base: _SendableMetatype, Base.AsyncIterator: _Send
       var iteratingTask: IteratingTask
       private(set) var buffer = Deque<Base.Element>()
       private(set) var finished = false
-      private(set) var failure: Error?
+      private(set) var failure: (any Error)?
       var cancelled = false
       var limit: UnsafeContinuation<Bool, Never>?
       var demand: UnsafeContinuation<Void, Never>?
@@ -333,7 +333,7 @@ where Base.Element: Sendable, Base: _SendableMetatype, Base.AsyncIterator: _Send
         finished = true
       }
 
-      mutating func fail(_ error: Error) {
+      mutating func fail(_ error: any Error) {
         finished = true
         failure = error
       }
@@ -476,7 +476,7 @@ where Base.Element: Sendable, Base: _SendableMetatype, Base.AsyncIterator: _Send
     }
 
     struct Resumption {
-      let continuation: UnsafeContinuation<Result<Base.Element?, Error>, Never>
+      let continuation: UnsafeContinuation<Result<Base.Element?, any Error>, Never>
       let result: Result<Base.Element?, Error>
 
       func resume() {
@@ -484,7 +484,7 @@ where Base.Element: Sendable, Base: _SendableMetatype, Base.AsyncIterator: _Send
       }
     }
 
-    func emit(_ result: Result<Base.Element?, Error>) {
+    func emit(_ result: Result<Base.Element?, any Error>) {
       let (resumptions, limitContinuation, demandContinuation, cancelled) = state.withLock {
         state -> ([Resumption], UnsafeContinuation<Bool, Never>?, UnsafeContinuation<Void, Never>?, Bool) in
         var resumptions = [Resumption]()
@@ -531,12 +531,12 @@ where Base.Element: Sendable, Base: _SendableMetatype, Base.AsyncIterator: _Send
 
     private func nextIteration(
       _ id: Int
-    ) async -> Result<Base.Element?, Error> {
+    ) async -> Result<Base.Element?, any Error> {
       return await withTaskCancellationHandler {
         await withUnsafeContinuation { continuation in
           let (res, limitContinuation, demandContinuation, cancelled) = state.withLock {
             state -> (
-              Result<Base.Element?, Error>?, UnsafeContinuation<Bool, Never>?, UnsafeContinuation<Void, Never>?, Bool
+              Result<Base.Element?, any Error>?, UnsafeContinuation<Bool, Never>?, UnsafeContinuation<Void, Never>?, Bool
             ) in
             guard let side = state.sides[id] else {
               return state.emit(.success(nil), limit: limit)
